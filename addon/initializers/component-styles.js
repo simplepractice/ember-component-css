@@ -1,25 +1,8 @@
-import Ember from "ember";
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
-import { getOwner } from '@ember/application';
 
 import podNames from 'ember-component-css/pod-names';
-
-const {
-  ComponentLookup,
-} = Ember;
-
-ComponentLookup.reopen({
-  componentFor(name, owner) {
-    owner = owner.hasRegistration ? owner : getOwner(this);
-
-    if (podNames[name] && !owner.hasRegistration(`component:${name}`)) {
-      owner.register(`component:${name}`, Component);
-    }
-    return this._super(...arguments);
-  },
-});
 
 Component.reopen({
   _componentIdentifier: computed({
@@ -36,7 +19,9 @@ Component.reopen({
 
   styleNamespace: computed({
     get() {
-      return podNames[this.get('_componentIdentifier')] || '';
+      let fromLayout = this._tryComponentName(this.get('layout.referrer.moduleName'));
+      let componentId = this.get('_componentIdentifier');
+      return podNames[fromLayout || componentId] || '';
     }
   }),
 
@@ -54,6 +39,20 @@ Component.reopen({
       this.classNames = this.classNames.concat(this.get('styleNamespace'));
     }
   },
+
+  _tryComponentName(modulePath) {
+    if(!modulePath) {
+      return;
+    }
+    let terminator = 'components/';
+    let pathSegementToRemove = /.+\/components\//;
+    modulePath = modulePath.replace(/\.\w+$/, '');
+    
+    modulePath = modulePath.substr(modulePath.lastIndexOf(terminator) + terminator.length ).replace(pathSegementToRemove, '')
+    modulePath = modulePath.replace(/\/template/, '');
+
+    return modulePath;
+  }
 });
 
 export function initialize() {}
